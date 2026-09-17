@@ -16,9 +16,13 @@
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](#)
 
-作者的话：DSH本身的架构极其轻便：
+作者的话：
+DSH本身的架构极其轻便：
+
 一 · 基线上下文：`~\.dsh\AGENTS.md`，系统提示中出现 `Instructions from: ~/.dsh/AGENTS.md`
+
 二 · 引用快照：`@deepseek-ai/dsh-session-reference`，输入框 `@` 可选历史会话
+
 三 · 索引查询：`session-query-sqlite` + `dsh-tool-session-query`，搜「记忆」跨会话命中
 本插件只是在此基础上做了个小扩展。让记忆和索引更加顺畅，全程DSH自己搞的，我只负责提灵感。所以有什么问题即时反馈，会改的(๑˃ᴗ˂)ﻭ
 
