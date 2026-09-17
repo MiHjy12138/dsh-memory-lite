@@ -1,0 +1,49 @@
+{
+  "name": "dsh-memory-lite",
+  "version": "0.1.0",
+  "description": "On-demand memory for AI agents: distill session logs into layered markdown, and let queries return only the matched snippets.",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "bin": {
+    "mem-collect": "./src/mem.mjs",
+    "mem-build": "./src/build.mjs",
+    "mem-verify": "./src/verify.mjs"
+  },
+  "scripts": {
+    "collect": "node src/mem.mjs collect",
+    "list": "node src/mem.mjs list",
+    "build": "node src/build.mjs",
+    "query": "node src/mem.mjs query",
+    "verify:example": "node src/verify.mjs examples/extracts-example.json"
+  },
+  "files": [
+    "src",
+    "docs",
+    "examples",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "keywords": [
+    "agent-memory",
+    "long-term-memory",
+    "context-engineering",
+    "token-efficiency",
+    "knowledge-base",
+    "markdown",
+    "cli",
+    "zero-dependency",
+    "nodejs",
+    "dsh"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/OWNER/dsh-memory-lite.git"
+  },
+  "bugs": {
+    "url": "https://github.com/OWNER/dsh-memory-lite/issues"
+  }
+}

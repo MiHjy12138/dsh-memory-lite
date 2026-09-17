@@ -1,0 +1,28 @@
+# ── 你的记忆数据：本地生成，不入库 ──────────────────────────
+# 仓库只承载「框架」，不承载「内容」。想公开自己的记忆库时，
+# 请在确认已脱敏后，单独用 `git add -f` 指定文件。
+.staging/
+.archive/
+extracts/
+topics/
+SUMMARY.md
+INDEX.md
+index.json
+dates.json
+cats.json
+memory.config.json
+.state.json
+
+# ── 系统与编辑器 ───────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp
+*~
+
+# ── 日志与依赖 ─────────────────────────────────────────────
+node_modules/
+npm-debug.log*
+*.log

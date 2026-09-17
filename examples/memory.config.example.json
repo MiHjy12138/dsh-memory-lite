@@ -1,0 +1,20 @@
+{
+  "project": "demo-project",
+  "scenes": [
+    {
+      "name": "写脚本、改配置时",
+      "hint": "PowerShell / bat / 编码",
+      "items": [
+        ["ps1 无 BOM 崩溃", "写 .ps1 一律存 UTF-8 BOM：PowerShell 5.1 按 GBK 解码无 BOM 文件，中文一乱就整段崩。"],
+        ["bat 必须 CRLF", "bat 必须用 CRLF 换行：LF 会被 cmd.exe 吃掉每行行首，脚本静默出错，最难查。"]
+      ]
+    },
+    {
+      "name": "验收与协作",
+      "hint": "验收他人交付、和人对齐口径时",
+      "items": [
+        ["验收要换口径重算", "验收不能只读报告：换一套口径重算异常项，再查它没报的那几项。"]
+      ]
+    }
+  ]
+}

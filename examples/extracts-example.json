@@ -1,0 +1,30 @@
+[
+  {
+    "kind": "lesson",
+    "topic": "ps1 无 BOM 崩溃",
+    "text": "写 .ps1 一律存 UTF-8 BOM：PowerShell 5.1 会把无 BOM 的文件按 GBK 解码，中文注释里的字可能吞掉行尾换行，把下一行代码并进注释，变量变 null、结果全错。",
+    "source": "session-1a2b3c4d#120",
+    "date": "2026-01-15"
+  },
+  {
+    "kind": "lesson",
+    "topic": "bat 必须 CRLF",
+    "text": "bat 必须用 CRLF 换行：LF 换行会被 cmd.exe 吃掉每行行首字符，脚本不报错但每行都错，静默坏掉最难查。",
+    "source": "session-1a2b3c4d#140",
+    "date": "2026-01-15"
+  },
+  {
+    "kind": "lesson",
+    "topic": "验收要换口径重算",
+    "text": "验收不能只读报告：换一套口径把异常项重算一遍，再去看它没报的那几项；笼统的百分比最容易藏问题。",
+    "source": "session-1a2b3c4d#170",
+    "date": "2026-01-15"
+  },
+  {
+    "kind": "lesson",
+    "topic": "合并单元格 ClearContents",
+    "text": "Excel COM 的 ClearContents 对合并单元格会报「无法对合并单元格执行此操作」，必须对整个合并区操作，不能只点左上角那一格。",
+    "source": "session-1a2b3c4d#192",
+    "date": "2026-01-15"
+  }
+]
