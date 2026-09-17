@@ -126,7 +126,7 @@ for (const c of catList) {
   L.push(`# ${c.name}`)
   L.push('')
   L.push(`> **何时翻它**：${c.when}`)
-  L.push(`> ${items.length} 条｜总览见 ..\\SUMMARY.md，索引见 ..\\INDEX.md｜来源标注 session-短id#事件序号`)
+  L.push(`> ${items.length} 条｜总览见 ../SUMMARY.md，索引见 ../INDEX.md｜来源标注 session-短id#事件序号`)
   for (const it of items) {
     L.push('')
     L.push(`- **[${KIND_CN[it.kind] ?? it.kind}]** ${it.text} \`${it.source}\``)
@@ -139,7 +139,7 @@ for (const c of catList) {
 const L2 = []
 L2.push(`# 项目记忆索引 · ${PROJECT}`)
 L2.push('')
-L2.push(`> 全库 ${all.length} 条，按 **主题** 分家（明细在 topics\\）。顶层见 SUMMARY.md。`)
+L2.push(`> 全库 ${all.length} 条，按 **主题** 分家（明细在 topics/）。顶层见 SUMMARY.md。`)
 L2.push('> **用法**：优先跑 \`mem.mjs query "关键词"\` 直接取命中片段；需要全局浏览时再读本文件。')
 for (const c of catList) {
   const items = all.filter(it => it.cat.key === c.key)
@@ -176,7 +176,7 @@ L3.push('## 主题导航（要深入时去这里）')
 L3.push('')
 L3.push('| 主题 | 条数 | 何时翻 |')
 L3.push('|---|---|---|')
-for (const c of catList) L3.push(`| topics\\${c.name}.md | ${all.filter(it => it.cat.key === c.key).length} | ${c.when} |`)
+for (const c of catList) L3.push(`| topics/${c.name}.md | ${all.filter(it => it.cat.key === c.key).length} | ${c.when} |`)
 L3.push('')
 writeFileSync(join(MEM_DIR, 'SUMMARY.md'), L3.join('\n'), 'utf8')
 
@@ -191,7 +191,7 @@ writeFileSync(join(MEM_DIR, 'index.json'), JSON.stringify({
   entries: all.map(it => ({
     id: it.id, date: it.date, kind: it.kind, topic: it.topic,
     cat: it.cat.key, catName: it.cat.name, top: topTopics.has(it.topic),
-    file: `topics\\${it.cat.name}.md`, source: it.source,
+    file: `topics/${it.cat.name}.md`, source: it.source,
   })),
 }, null, 2), 'utf8')
 
@@ -203,4 +203,4 @@ console.log('分类分布：' + catList.map(c => `${c.name} ${all.filter(it => i
 const kinds = {}
 for (const it of all) kinds[it.kind] = (kinds[it.kind] ?? 0) + 1
 console.log('类型分布：' + Object.entries(kinds).map(([k, v]) => `${KIND_CN[k] ?? k} ${v}`).join('｜'))
-console.log(`明细已写入 topics\\（${catList.length} 个主题文件）`)
+console.log(`明细已写入 topics/（${catList.length} 个主题文件）`)

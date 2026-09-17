@@ -1,0 +1,23 @@
+{
+  "name": "dsh-memory-lite",
+  "owner": "MiHjy12138",
+  "url": "https://github.com/MiHjy12138/dsh-memory-lite",
+  "category": "memory",
+  "keywords": [
+    "memory",
+    "agent-memory",
+    "context-engineering",
+    "token-efficiency",
+    "markdown",
+    "zero-dependency",
+    "记忆",
+    "上下文",
+    "省token"
+  ],
+  "description": {
+    "en": "On-demand memory: distill session logs into layered markdown (SUMMARY / INDEX / topics), then let the mem_query tool return only the matched snippets — about 700 characters instead of 12,000. Zero dependencies, no per-turn injection, every entry traceable back to its source.",
+    "zh": "按需记忆库：会话日志提炼成分层 markdown 记忆，mem_query 只回命中片段（约 700 字符，而不是上万字符）。零依赖、不每轮注入、条条可溯源。"
+  },
+  "install": "dsh plugin --profile web add github:MiHjy12138/dsh-memory-lite",
+  "added": "2026-09-17"
+}

@@ -1,8 +1,9 @@
 {
   "name": "dsh-memory-lite",
-  "version": "0.1.0",
-  "description": "On-demand memory for AI agents: distill session logs into layered markdown, and let queries return only the matched snippets.",
+  "version": "0.2.0",
+  "description": "On-demand memory for AI agents: distill session logs into layered markdown, and let queries return only the matched snippets. Ships as both a DSH plugin (mem_query tool) and a zero-dependency CLI.",
   "type": "module",
+  "main": "index.js",
   "engines": {
     "node": ">=18"
   },
@@ -11,14 +12,36 @@
     "mem-build": "./src/build.mjs",
     "mem-verify": "./src/verify.mjs"
   },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "exports": {
+    ".": "./index.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./cli": "./src/mem.mjs",
+    "./package.json": "./package.json"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/dsh-tools": ">=0.1.5-rc.2"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/dsh-tools": {
+      "optional": true
+    }
+  },
   "scripts": {
     "collect": "node src/mem.mjs collect",
     "list": "node src/mem.mjs list",
     "build": "node src/build.mjs",
     "query": "node src/mem.mjs query",
-    "verify:example": "node src/verify.mjs examples/extracts-example.json"
+    "verify:example": "node src/verify.mjs examples/extracts-example.json --staging examples/staging"
   },
   "files": [
+    "index.js",
+    "cordis.patch.yml",
+    "marketplace-entry.json",
     "src",
     "docs",
     "examples",
@@ -27,6 +50,8 @@
     "CHANGELOG.md"
   ],
   "keywords": [
+    "dsh-plugin",
+    "deepseek-harness",
     "agent-memory",
     "long-term-memory",
     "context-engineering",
@@ -35,8 +60,7 @@
     "markdown",
     "cli",
     "zero-dependency",
-    "nodejs",
-    "dsh"
+    "nodejs"
   ],
   "license": "MIT",
   "repository": {

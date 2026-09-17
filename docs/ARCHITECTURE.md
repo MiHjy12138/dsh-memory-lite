@@ -159,6 +159,37 @@ score = Σ_词 [ min(词长, 6) × (1 + log2(命中次数)) ]
 
 ---
 
+## 两条入口：CLI 与插件
+
+同一套记忆库、两种调用方式，**共用 `src/lib.mjs`**——打分逻辑只有一份，不会各改各的走偏。
+
+| 入口 | 文件 | 谁在用 | 触发方式 |
+|---|---|---|---|
+| 插件 | `index.js` ＋ `cordis.patch.yml` | agent 自己 | 模型调用 `mem_query` 工具 |
+| CLI | `src/mem.mjs` | 人 / 脚本 | `node src/mem.mjs query "…"` |
+
+插件入口的全部骨架就这么点：
+
+```js
+export const name = 'dsh-memory-lite'
+export const inject = ['tools']
+
+export function apply(ctx) {
+  ctx.tools.register(defineTool({ name: 'mem_query', description: '…', parameters: {…},
+    output: { schema: {…}, render: (a, v) => [{ type: 'text', text: v.text }] },
+    execute: async (args, exec) => { /* 定位库 → queryDir → formatHits */ } }))
+}
+```
+
+四个设计要点：
+
+1. **工具描述即用法说明**。`mem_query` 的 description 里直接写「优先用它，别整份读记忆文件」——所以插件版**不需要**再往 `AGENTS.md` 里写约定，工具自己会说话。
+2. **记忆库定位**：`MEM_HOME` → `<会话工作区>/memory` → 会话工作区本身。**刻意不把插件自身目录当候选**：那是只读的 `node_modules`，而且会把 A 工作区的记忆串给 B 工作区——这个 bug 就是离线仿真跑出来的。
+3. **只读**。插件只注册查询工具，不注册采集或写入：有副作用的动作（扫日志、写素材）仍由人显式执行。
+4. **互不牵连**。`lib.mjs` 是纯函数模块、没有顶层副作用，因此插件挂了不影响 CLI，反之亦然。
+
+---
+
 ## 扩展点
 
 | 想做的事 | 改哪里 |

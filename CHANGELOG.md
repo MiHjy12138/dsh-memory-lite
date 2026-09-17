@@ -2,6 +2,24 @@
 
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 与语义化版本。
 
+## [0.2.0] - 2026-09-17
+
+### Added
+
+- `index.js` + `cordis.patch.yml` —— DSH 插件入口，注册 `mem_query` 工具
+  - 工具描述里写明「优先用它，别整份读记忆文件」，所以**不需要**在 `AGENTS.md` 里补约定
+  - 记忆库定位：`MEM_HOME` → `<会话工作区>/memory` → 会话工作区本身
+  - 刻意不把插件自身目录当候选：那是只读的 `node_modules`，而且会把 A 工作区的记忆串给 B 工作区（这个 bug 是离线仿真跑出来的）
+  - 只读：插件不注册采集/写入工具，有副作用的动作仍由人显式执行
+- `src/lib.mjs` —— 共享核心，CLI 与插件共用同一份解析与打分实现
+- `marketplace-entry.json` —— 插件市场条目（供 PR 到策展列表）
+- `package.json` 新增 `main` / `dsh.bundle.patch` / `exports` / `peerDependencies`（`@deepseek-ai/dsh-tools`，标为 optional，纯 CLI 用户不受影响）
+
+### Changed
+
+- `src/mem.mjs` 改为引用 `src/lib.mjs`：行为与输出格式不变，只是把共享逻辑抽出去（302 → 135 行）
+- markdown 生成物里的路径分隔符统一为正斜杠（`topics/...`、`../SUMMARY.md`），跨平台一致
+
 ## [0.1.0] - 2026-09-17
 
 ### Added

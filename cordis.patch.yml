@@ -1,0 +1,5 @@
+# dsh bundle patch: 把本插件插进 profile 的层栈。
+# apply()（见 index.js）会注册 mem_query 工具 —— 只读检索，不注入任何内容。
+- insert:
+    - id: dsh-memory-lite
+      name: 'dsh-memory-lite'
