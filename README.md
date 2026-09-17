@@ -87,7 +87,7 @@ injection、injected every turn。功能确实全，代价是**每一轮都在�
 | | 常见记忆插件 | dsh-memory-lite |
 |---|---|---|
 | 每轮注入 | 有（有人实测过约 2.7 KB/轮） | **0 字符**（不注入记忆内容） |
-| 形态 | 插件进程 + npm 依赖 | 三个 `.mjs` ＋ 一个 72 行的插件入口 |
+| 形态 | 插件进程 + npm 依赖 | 四个 `.mjs` ＋ 一个 72 行的插件入口（共 700 行） |
 | 存储 | SQLite / 服务端 / 自有格式 | markdown + 一个 `index.json` |
 | 查询 | 自动召回（你事先不知道召回了什么） | 显式 `mem_query`，回了什么一眼看得见 |
 | 核对 | 多为「自动捕获后直接入库」 | `verify` 把每条拉回素材原文 |
@@ -277,7 +277,8 @@ dsh-memory-lite/
     │   └── session-1a2b3c4d.md   # 素材长什么样（合成）
     ├── extracts-example.json     # 提炼输入长什么样
     ├── SUMMARY.example.md        # 输出长什么样
-    └── memory.config.example.json # 分类与顶层场景的配置示例
+    ├── memory.config.example.json # 分类与顶层场景的配置示例
+    └── plugin-smoke-test.mjs     # 插件冒烟测试：不装进 DSH 也能验 mem_query
 ```
 
 ---

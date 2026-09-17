@@ -117,5 +117,8 @@ npm publish        # files 字段已配好：index.js / cordis.patch.yml / src /
 - [ ] 三条命令能跑通：
       `node src/mem.mjs query "BOM"`、`node src/build.mjs`、
       `node src/verify.mjs examples/extracts-example.json --staging examples/staging`
-- [ ] 插件入口语法通过：`node --check index.js`，且离线仿真能注册出 `mem_query`
+- [ ] 插件入口可加载、工具能注册、工作区无库时正确报错：
+      `node examples/plugin-smoke-test.mjs .`
+      （需在能解析 `@deepseek-ai/dsh-tools` 的目录下运行，例如 DSH 的 profile 目录）
+      —— 期望以 `✓ 冒烟测试通过` 结尾、退出码 0
 - [ ] 示例数据是合成的，不是从真实记忆库里拷的
