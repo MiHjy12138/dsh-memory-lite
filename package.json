@@ -52,6 +52,7 @@
   "keywords": [
     "dsh-plugin",
     "deepseek-harness",
+    "memory",
     "agent-memory",
     "long-term-memory",
     "context-engineering",

@@ -23,26 +23,59 @@
 
 ## 2. Topics（标签）—— **必看**
 
-插件市场的搜索（`find_dsh_plugin`）**就是 GitHub 搜索**：`关键词 + topic:dsh-plugin`，
-只匹配**仓库名、Description、Topics** 三处。所以下面第一项是硬门槛，缺了搜不到。
+插件市场的搜索（`find_dsh_plugin`）**就是 GitHub 搜索**：`关键词 + topic:dsh-plugin`。
+拆开看这两半：**`topic:dsh-plugin` 是硬过滤；关键词那半走仓库的全文匹配（仓库名 ＋ Description ＋ Topics）**。
+
+所以 topic 分三层填 —— 一个仓库最多能打 20 个，不必取舍：
+
+| 层 | 作用 | 填什么 |
+|---|---|---|
+| 门槛 | 缺了搜不到 | `dsh-plugin` |
+| 宽词 | 覆盖泛搜的人 | `memory`、`markdown`、`cli`、`nodejs`、`llm` |
+| 垂直 | 命中明确意图 | `agent-memory`、`long-term-memory`、`context-engineering`、`token-efficiency`、`ai-agent`、`knowledge-base`、`deepseek-harness` |
 
 ```
-dsh-plugin            ← 硬门槛：缺了插件市场搜不到
-deepseek-harness
+dsh-plugin
+memory
 agent-memory
 long-term-memory
 context-engineering
 token-efficiency
-llm
+deepseek-harness
 ai-agent
 knowledge-base
+llm
 markdown
 cli
-zero-dependency
 nodejs
 ```
 
-> 定位最独特的是 `token-efficiency` 与 `context-engineering`——搜的人不多，但正是这个项目解决的问题。
+### 「简单词更好找吗」—— 实测答案：差别很小，所以都打
+
+同一时刻在市场里实测：
+
+| 查询 | 返回 |
+|---|---|
+| `memory` | ruflo ★72656、OpenViking ★37824、EverOS ★13014、MemOS ★11490、honcho ★7211 … |
+| `agent-memory` | **前 8 名与上面完全一致**，只有后面几条顺序不同 |
+
+原因是记忆类仓库的 Description 里普遍同时出现 `memory` 与 `agent`，GitHub 的全文匹配对两个词都能命中。
+**所以纠结宽词还是精准词是白费力气 —— 两个都打上就行。**
+
+### 真正决定「被不被看见」的是排序，不是 topic 宽窄
+
+`find_dsh_plugin` **按 star 数排序**。搜 `memory` 的前 20 名全在几百到几万星之间：
+dsh-mnemon ★382、dsh-memory-evolve ★314、dsh-memory ★214、dsh-noema ★128、
+dsh-mneme ★110、dsh-meow-memory ★106、StrataGate-AgentMemory ★85、dsh-auto-memory ★70 …
+新仓库（0 星）无论怎么选 topic 都会排在后面。能改变这件事的只有三样：
+
+1. **Description 里写清差异** —— 搜索权重最高、也最常被忽略的一处
+2. **精准长尾词**：`dsh-memory-lite` 这种独特名字，搜它的人一定找得到你
+3. **策展列表**（见第 4 节）：`awesome-dsh-plugin.com` 的 Memory 分类由人工策展，**不看 star**
+
+> 这批插件的定位几乎都是「记得更多」—— 图谱、SQLite、语义召回、侧栏面板、后台自动整理。
+> 本项目只有一句差异：**别人管「记得多」，它管「查得省」**（不注入、不建库、不起进程）。
+> Description 就该说这一句。
 
 ---
 
