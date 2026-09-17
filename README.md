@@ -82,7 +82,7 @@ node src/verify.mjs examples/extracts-example.json --staging examples/staging
 
   1. [7.8] topics\脚本与编码.md#6
      **[教训]** PowerShell 5.1 会把无 BOM 的 .ps1 按 GBK 解码，中文注释吞掉行尾换行，
-     把下一行代码并进注释，导致变量为 null。脚本必须写 UTF-8 BOM。 `session-1a2b3c4d#318`
+     把下一行代码并进注释，导致变量为 null。脚本必须写 UTF-8 BOM。 `session-1a2b3c4d#120`
 ```
 
 ---
@@ -193,6 +193,7 @@ dsh-memory-lite/
 ├── CHANGELOG.md
 ├── package.json
 ├── .gitignore               # 默认忽略你本地的记忆数据
+├── .gitattributes           # 统一换行符（LF）
 ├── docs/
 │   ├── ARCHITECTURE.md      # 数据流、文件格式、设计取舍
 │   ├── TOKEN-ECONOMY.md     # 上下文成本的实测方法与账
@@ -202,10 +203,11 @@ dsh-memory-lite/
 │   ├── build.mjs            # 提炼汇总（分类可配置）
 │   └── verify.mjs           # 溯源核对
 └── examples/
-    ├── staging-example.md   # 素材长什么样
-    ├── extracts-example.json# 提炼输入长什么样
-    ├── SUMMARY.example.md   # 输出长什么样
-    └── memory.config.example.json  # 分类与顶层场景的配置示例
+    ├── staging/
+    │   └── session-1a2b3c4d.md   # 素材长什么样（合成）
+    ├── extracts-example.json     # 提炼输入长什么样
+    ├── SUMMARY.example.md        # 输出长什么样
+    └── memory.config.example.json # 分类与顶层场景的配置示例
 ```
 
 ---

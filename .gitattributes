@@ -1,0 +1,12 @@
+# 统一换行符：避免 Windows 用户 clone 后整仓库「被修改」
+* text=auto eol=lf
+
+# Windows 批处理必须是 CRLF，否则 cmd.exe 会吃掉每行行首
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# 二进制
+*.png binary
+*.jpg binary
+*.ico binary
+*.zip binary
