@@ -110,20 +110,83 @@ grep -rn -E "(token|api[_-]?key|secret|password|sk-[A-Za-z0-9]{16,}|[A-Z]:\\\\Us
 
 ## 4. 上架插件市场（两层，别混）
 
-| 层 | 靠什么 | 要做什么 |
+| 层 | 靠什么 | 状态 |
 |---|---|---|
-| **搜得到** | GitHub topic `dsh-plugin` | 第 2 节填上即可，**自动生效**，无需提交 |
-| **看得到 · 一键装** | 策展列表 `awesome-dsh-plugin.com/plugins.json` | 需要把 `marketplace-entry.json` **PR** 给策展仓库 |
+| **搜得到** | GitHub topic `dsh-plugin` | ✓ 已生效（实测：搜精准名排第 2 位） |
+| **看得到 · 一键装** | 策展列表 `awesome-dsh-plugin.com/plugins.json` | ⏳ PR 已备好，待提（见 4.3） |
 
-本仓库根目录已备好 `marketplace-entry.json`（名称 / owner / 分类 / 中英描述 / install 命令 / keywords）。
+> 补充一句：本仓库根的 `marketplace-entry.json` 是给工具侧消费的备用元数据；
+> **真正投给策展列表的，是下面这种 YAML 文件**——两者用途不同，别搞混。
 
-PR 步骤：
+### 4.1 策展仓库的规则（2026-09-17 实测）
 
-1. fork 并打开 `https://github.com/awesome-dsh-plugin/awesome-dsh-plugin`
-2. **先看它现有条目的目录结构与字段格式**（本清单不臆测其约定），把本仓库的条目按同样格式放进去
-3. 提 PR，附上仓库地址与一句说明
+结构是**一个插件一个 YAML**，放在 `data/plugins/<owner>__<repo>.yml`。
+两个 README 由脚本从这些 YAML 生成——**不要手改 README**（这也正是别人的 PR 永远不会和你冲突的原因）。
 
-> 在 PR 被合并前，用户也可以用第 3 节的 install 命令直接装——市场只是「被发现」的渠道，不是「能装」的前提。
+```yaml
+url: https://github.com/owner/repo        # 必须与仓库完全一致
+name: owner/repo                          # 列表里显示的链接文字
+category: memory                          # 取值见 contributing.md 的分类表
+description:
+  en: '一句话说明，以句号结尾。'              # 必填；描述里含「: 」时必须加引号
+  zh: "中文描述"                             # 可选——不写，维护者会补
+```
+
+PR 自查清单（来自它的 `PULL_REQUEST_TEMPLATE.md`）与本仓库状态：
+
+| # | 要求 | 状态 |
+|---|---|---|
+| 1 | 新增一个 `data/plugins/<owner>__<repo>.yml` | ✓ 已备好 |
+| 2 | 仓库 `package.json` 声明 **`dsh.bundle`**（只有 `dsh.client` 不可安装） | ✓ `dsh.bundle.patch` |
+| 3 | **仓库创建满 1 天** | ⏳ 创建于 2026-09-17 15:19 → **09-18 15:19 后可提** |
+| 4 | `category` 取值正确 | ✓ `memory` |
+| 5 | 描述只说功能、不带营销词 | ✓ 已按此写（没写「省 92%」这类卖点） |
+| 6 | 仓库带 `dsh-plugin` topic | ✓ 已设 |
+
+### 4.2 已经备好的（不用重做）
+
+| 项 | 值 |
+|---|---|
+| fork | `MiHjy12138/awesome-dsh-plugin` |
+| 分支 | `add-dsh-memory-lite`（commit `2433d58`），已推到该 fork |
+| 文件 | `data/plugins/MiHjy12138__dsh-memory-lite.yml` |
+
+### 4.3 明天要做的：一条命令
+
+> 前提：距仓库创建满 24 小时（**09-18 15:19 之后**）。`gh` 已用账号 `MiHjy12138` 认证明。
+
+先写一份 PR 正文（`pr-body.md`）：
+
+```markdown
+Adds one entry file: `data/plugins/MiHjy12138__dsh-memory-lite.yml`
+
+- [x] one file at `data/plugins/<owner>__<repo>.yml` — that single file is the whole submission
+- [x] `package.json` declares `dsh.bundle` (patch: `./cordis.patch.yml`)
+- [x] repo is at least 1 day old
+- [x] `category` is `memory`
+- [x] description states what the plugin does, no superlatives
+- [x] repo carries the `dsh-plugin` topic
+
+On-demand memory for DeepSeek Harness: session logs are distilled into layered
+markdown, and a `mem_query` tool returns only the matched entries instead of the
+whole index. Zero dependencies; nothing is injected per turn; every entry keeps a
+source pointer back to the conversation it came from.
+```
+
+然后提：
+
+```bash
+gh pr create \
+  --repo awesome-dsh-plugin/awesome-dsh-plugin \
+  --head MiHjy12138:add-dsh-memory-lite \
+  --title "Add MiHjy12138/dsh-memory-lite (memory)" \
+  --body-file pr-body.md
+```
+
+合并之后：策展清单更新 → `awesome-dsh-plugin.com` 与 DSH 里的**市场面板**同步出现本插件，别人可一键装。
+这条路**不看 star**，所以对新仓库是关键一步。
+
+> 在 PR 被合并前，用户仍可用第 3 节的 install 命令直接装——市场只是「被发现」的渠道，不是「能装」的前提。
 
 ---
 
