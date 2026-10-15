@@ -1,6 +1,6 @@
 {
   "name": "dsh-memory-lite",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "On-demand memory for AI agents: distill session logs into layered markdown, and let queries return only the matched snippets. Ships as both a DSH plugin (mem_query tool) and a zero-dependency CLI.",
   "type": "module",
   "main": "index.js",

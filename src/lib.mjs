@@ -9,7 +9,7 @@
  */
 
 import { zstdDecompressSync } from 'node:zlib'
-import { existsSync, readFileSync, readdirSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { dirname, basename, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -156,6 +156,56 @@ export function parseTerms(input) {
   return String(input ?? '').trim().toLowerCase().split(/\s+/).filter(t => t.length >= 2)
 }
 
+// ── 泛词降权（2026-10-15）──────────────────────────────────
+// 背景：权重取的是词长，「不可用」3 字（6 分）压过「磁盘」2 字（4 分），于是查
+//   「磁盘 不可用」首条给的是只讲到「不可用」的记录。
+// 为什么不用 df：本库短层只 213 条，实测 df 反而救不了这个案例——「不可用」df 0.5%、
+//   「磁盘」0.9%，都远低于任何阈值；倒是「插件」df 17.8%、「文件」14.6% 会被 df 规则误伤。
+//   所以用一张极小的泛词表，表内词的贡献 ×0.5，表外恒 ×1。要调口径只动这两行。
+export const GENERIC_WEIGHT = 0.5
+export const GENERIC_WORDS = new Set(['不可用', '索引', '情况', '内容'])
+export const termWeight = t => (GENERIC_WORDS.has(t) ? GENERIC_WEIGHT : 1)
+
+// 命中计数：纯 ASCII 词加词边界，CJK 词保持子串
+// 背景（2026-10-15 加固）：原用纯 indexOf 子串匹配，查 "com" 会咬进
+//   ascii_composer / npmmirror.com，查 "doc" 会咬进 autoDoctor —— 英文缩写必然误召回。
+// 规则：纯 ASCII 的词命中位置的前后字符都不得是 [A-Za-z0-9_]；CJK 词（含任何非
+//   ASCII 字符的词）保持原样，中文没有词边界。
+// 边界之外再加一条「左侧黏点守卫」：命中片段左侧紧贴的 '.' 若它左边还黏着**字母**
+//   （registry.npmmirror.com 里的 .com、cordis.patch.yml 里的 .yml），说明查询词只是
+//   某个域名/标识符的尾巴，算词内、不命中；点开头而前面是空格/行首的独立记号（.doc、.json）
+//   不受影响，照旧命中。点左边是数字的不设守卫——0.3.20、10.0.0.1 里的点仍算边界，
+//   免得查 "20" 之类连版本号/网段的数字都搜不到。
+//   右侧故意不放守卫：术语后跟 ".bak" 这类是用户要的前缀命中
+//   （查 cordis.patch.yml 仍该命中 cordis.patch.yml.bak-p2-… 那条）。
+// 注意：边界只看命中片段**之外**的字符，所以 build.mjs、127.0.0.1、dsh-mem 这类
+//   含点/连接符的整体词照旧命中（前面的 / 或空格、后面的空格都算边界）。
+const isAsciiTerm = t => /^[\x00-\x7F]+$/.test(t)
+const isWordChar = c => c !== undefined && /[A-Za-z0-9_]/.test(c)
+const isLetter = c => c !== undefined && /[A-Za-z_]/.test(c)
+
+// 左侧边界：外侧不是词字符即算边界；外侧是 '.' 时，要求该点左边也不是字母
+function edgeLeftOk(text, i) {
+  const c = text[i]
+  if (c === '.') return !isLetter(text[i - 1])
+  return !isWordChar(c)
+}
+// 右侧边界：外侧不是词字符即算边界
+const edgeRightOk = c => !isWordChar(c)
+
+function countHits(lowText, term) {
+  let n = 0, at = 0
+  if (!isAsciiTerm(term)) {                                  // CJK / 含非 ASCII：原逻辑
+    while ((at = lowText.indexOf(term, at)) !== -1) { n++; at += term.length }
+    return n
+  }
+  while ((at = lowText.indexOf(term, at)) !== -1) {
+    if (edgeLeftOk(lowText, at - 1) && edgeRightOk(lowText[at + term.length])) n++
+    at += term.length
+  }
+  return n
+}
+
 // 打分：命中词长 × (1 + log2(命中次数))，多词累加；长词权重更高
 export function scanFile(file, label, terms, out) {
   let lines
@@ -166,24 +216,61 @@ export function scanFile(file, label, terms, out) {
     const text = raw.slice(2), low = text.toLowerCase()
     let score = 0, hits = 0
     for (const t of terms) {
-      let n = 0, at = 0
-      while ((at = low.indexOf(t, at)) !== -1) { n++; at += t.length }
-      if (n) { hits++; score += Math.min(t.length, 6) * (1 + Math.log2(n + 1)) }
+      const n = countHits(low, t)
+      if (n) { hits++; score += Math.min(t.length, 6) * (1 + Math.log2(n + 1)) * termWeight(t) }
     }
     if (!hits) continue
     out.push({ score: Math.round(score * 10) / 10, hits, file: label, ln: i + 1, text })
   }
 }
 
+// ── 长文层：manual/ 与 procedures/（第二检索面）────────────────
+// 背景（2026-10-15）：原来只扫 SUMMARY + topics，合计约 4.6 万字符；manual/（51 份）
+//   与 procedures/（24 份）那 24.7 万字符一个字都查不到，覆盖率仅 15.7%。实测把这两层
+//   接进来只多花 ~15 毫秒（含读盘），缺的不是性能，是没接线。
+// 粒度：**文件行**（不是 `- ` 条目行），只认非空且长度 ≥ 10 的行。
+// 权重：长文噪声大，整层乘 LONG_WEIGHT=0.6（SUMMARY/topics 恒 ×1），两层混排后按分排序。
+// 位置：标 `manual/xxx.md#行号` / `procedures/xxx.md#行号`，并带 `长文` 标记以区别层级。
+// 回给调用方的仍是**片段**（formatHits 照旧 200 字符截断），要看全文让它自己 read。
+export const LONG_WEIGHT = 0.6
+
+export function scanLongFile(file, label, terms, out) {
+  let lines
+  try { lines = readFileSync(file, 'utf8').split('\n') } catch { return }
+  for (let i = 0; i < lines.length; i++) {
+    const text = lines[i].trim()
+    if (!text || text.length < 10) continue                  // 空行与太短的行（标题/分隔）不认
+    const low = text.toLowerCase()
+    let score = 0, hits = 0
+    for (const t of terms) {
+      const n = countHits(low, t)
+      if (n) { hits++; score += Math.min(t.length, 6) * (1 + Math.log2(n + 1)) * termWeight(t) }
+    }
+    if (!hits) continue
+    out.push({ score: Math.round(score * LONG_WEIGHT * 10) / 10, hits, long: true, file: label, ln: i + 1, text })
+  }
+}
+
+// 列目录里的 .md；目录不存在 / 读不动（ENOTDIR / EACCES…）→ 返回空数组，绝不抛
+function mdFiles(dir) {
+  try { return readdirSync(dir).filter(f => f.endsWith('.md')) } catch { return [] }
+}
+
+// 扫一个长文目录下的所有 .md；目录不存在 / 读不动 → 静默跳过，绝不报错
+export function scanLongDir(dir, prefix, terms, out) {
+  for (const f of mdFiles(dir)) scanLongFile(join(dir, f), `${prefix}/${f}`, terms, out)
+}
+
 // 扫 SUMMARY.md + topics/*.md（不扫 INDEX.md，避免索引与正文重复计分）
+// + 长文层 manual/（记忆库下）与 procedures/（工作区根 = 记忆库的上一级，二者都 ×0.6）
 export function queryDir(memDir, terms, n = 5) {
   const out = []
   const summ = join(memDir, 'SUMMARY.md')
   if (existsSync(summ)) scanFile(summ, 'SUMMARY.md', terms, out)
   const tdir = join(memDir, 'topics')
-  if (existsSync(tdir)) {
-    for (const f of readdirSync(tdir)) if (f.endsWith('.md')) scanFile(join(tdir, f), `topics/${f}`, terms, out)
-  }
+  for (const f of mdFiles(tdir)) scanFile(join(tdir, f), `topics/${f}`, terms, out)
+  scanLongDir(join(memDir, 'manual'), 'manual', terms, out)            // 长文层 · ×0.6
+  scanLongDir(join(dirname(memDir), 'procedures'), 'procedures', terms, out) // 长文层 · ×0.6
   out.sort((a, b) => b.score - a.score || b.hits - a.hits)
   const seen = new Set(), picked = []
   for (const r of out) {
@@ -203,9 +290,133 @@ export function formatHits(picked, total, terms, maxLen = 200) {
   const lines = [`  命中 ${total} 处 → 取前 ${picked.length} 条（关键词：${terms.join(' / ')}）`, '']
   picked.forEach((r, i) => {
     const body = r.text.length > maxLen ? r.text.slice(0, maxLen) + '…' : r.text
-    lines.push(`  ${i + 1}. [${r.score}] ${r.file}#${r.ln}`)
+    lines.push(`  ${i + 1}. [${r.score}${r.long ? ' 长文' : ''}] ${r.file}#${r.ln}`)
     lines.push(`     ${body}`)
     lines.push('')
   })
   return lines.join('\n').replace(/\n+$/, '')
+}
+
+// ── 库新鲜度 / stats 概览（2026-10-15）───────────────────────
+// 为什么要有：这次 agent 完全看不到「采集已停更 5 天」（.state.json 停在 10-10），
+//   全靠人绕到文件系统才发现；两条数字必须随时可复算。
+// 新鲜度：查询末尾一行「库建于 …（N 天前），共 N 条」。数据源优先 index.json 的
+//   updated / total；updated 只写日期（无时分）时用 SUMMARY.md 的 mtime 当时间戳
+//   （那是真时间，不编造时分）；两者都没有 → 返回空串，调用方不打这一行。
+export const TOKEN_DIVISOR = 3.2      // 粗估：字符 ÷ 3.2 ≈ token
+const DAY_MS = 86400000
+
+// 本地时间 yyyy-MM-dd HH:mm
+export function fmtTime(ms) {
+  const d = new Date(ms), p = n => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
+}
+
+export function daysAgo(ms, now = Date.now()) {
+  return Math.max(0, Math.floor((now - ms) / DAY_MS))
+}
+
+// 日历天差（跨零点就算一天，和「10-10 停在 10-15」这种口语口径对得上）
+export function calendarDaysAgo(ms, now = Date.now()) {
+  const a = new Date(ms), b = new Date(now)
+  const d0 = Date.UTC(a.getFullYear(), a.getMonth(), a.getDate())
+  const d1 = Date.UTC(b.getFullYear(), b.getMonth(), b.getDate())
+  return Math.max(0, Math.round((d1 - d0) / DAY_MS))
+}
+
+// 读 JSON；缺失 / 坏了 → null（不抛）
+function readJson(file) {
+  try { return JSON.parse(readFileSync(file, 'utf8')) } catch { return null }
+}
+
+// 文件 mtime；读不到 → null（不抛）
+function mtimeMs(file) {
+  try { return statSync(file).mtimeMs } catch { return null }
+}
+
+// 读文本；读不到 → null（不抛）
+function readText(file) {
+  try { return readFileSync(file, 'utf8') } catch { return null }
+}
+
+// 一个目录里 .md 的「份数 + 总字符」（读不动的文件跳过）
+function layerSize(dir) {
+  let files = 0, chars = 0
+  for (const f of mdFiles(dir)) {
+    const t = readText(join(dir, f))
+    if (t === null) continue
+    files++; chars += t.length
+  }
+  return { files, chars }
+}
+
+// 短层条目行（`- ` 开头且 ≥10 字符），用于算实际条数与最长条目
+function entryRows(memDir) {
+  const rows = []
+  const add = (file, label) => {
+    const txt = readText(file)
+    if (txt === null) return
+    const lines = txt.split('\n')
+    for (let i = 0; i < lines.length; i++) {
+      const raw = lines[i].trim()
+      if (raw.startsWith('- ') && raw.length >= 10) rows.push({ label, ln: i + 1, text: raw.slice(2) })
+    }
+  }
+  add(join(memDir, 'SUMMARY.md'), 'SUMMARY.md')
+  for (const f of mdFiles(join(memDir, 'topics'))) add(join(memDir, 'topics', f), `topics/${f}`)
+  return rows
+}
+
+// 查询末尾那一行；库文件都缺失时返回 ''（调用方据此不打）
+export function freshnessLine(memDir) {
+  const idx = readJson(join(memDir, 'index.json'))
+  const upd = typeof idx?.updated === 'string' ? idx.updated : ''
+  const summMs = mtimeMs(join(memDir, 'SUMMARY.md'))
+  let ts = null
+  if (/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}/.test(upd)) ts = Date.parse(upd)
+  else if (summMs !== null) ts = summMs
+  else if (/^\d{4}-\d{2}-\d{2}$/.test(upd)) ts = Date.parse(`${upd}T00:00:00`)
+  if (ts === null || !Number.isFinite(ts)) return ''
+  const total = Number.isFinite(idx?.total) ? idx.total : entryRows(memDir).length
+  return `  库建于 ${fmtTime(ts)}（${daysAgo(ts)} 天前）${total ? `，共 ${total} 条` : ''}`
+}
+
+// 一次给出：总条数 / 正文总字符 / 粗估 token / 最长条目 / 主题分布 / 采集停更天数
+export function statsReport(memDir) {
+  const idx = readJson(join(memDir, 'index.json'))
+  const rows = entryRows(memDir)
+  const layers = [
+    ['SUMMARY.md', { files: existsSync(join(memDir, 'SUMMARY.md')) ? 1 : 0, chars: (readText(join(memDir, 'SUMMARY.md')) ?? '').length }],
+    ['topics/', layerSize(join(memDir, 'topics'))],
+    ['manual/', layerSize(join(memDir, 'manual'))],
+    ['procedures/', layerSize(join(dirname(memDir), 'procedures'))],
+  ]
+  const chars = layers.reduce((a, [, l]) => a + l.chars, 0)
+  const files = layers.reduce((a, [, l]) => a + l.files, 0)
+  const L = []
+  L.push(`  记忆库概览：${memDir}`)
+  L.push(`  总条数      ${Number.isFinite(idx?.total) ? idx.total : rows.length} 条（index.json.total` +
+    `${Number.isFinite(idx?.total) && idx.total !== rows.length ? `；摘要+主题实际条目行 ${rows.length} 行` : ''}）`)
+  L.push(`  正文总字符  ${chars.toLocaleString('en-US')} 字符 / ${files} 份 .md（${layers.map(([n, l]) => `${n} ${l.chars.toLocaleString('en-US')}`).join(' + ')}）`)
+  L.push(`  粗估 token  约 ${Math.round(chars / TOKEN_DIVISOR).toLocaleString('en-US')}（字符 ÷ ${TOKEN_DIVISOR}，仅粗估）`)
+  const longest = [...rows].sort((a, b) => b.text.length - a.text.length).slice(0, 3)
+  if (longest.length) {
+    L.push('  最长条目')
+    longest.forEach((r, i) => L.push(`    ${i + 1}. ${r.text.length} 字符  ${r.label}#${r.ln}`))
+  }
+  const cats = Array.isArray(idx?.categories) ? idx.categories.filter(c => typeof c?.name === 'string') : []
+  if (cats.length) {
+    L.push(`  主题分布    ${cats.length} 个主题：${cats.map(c => `${c.name} ${c.count}`).join(' / ')}`)
+  } else {
+    const byFile = new Map()
+    for (const r of rows) if (r.label.startsWith('topics/')) byFile.set(r.label, (byFile.get(r.label) ?? 0) + 1)
+    if (byFile.size) L.push(`  主题分布    ${byFile.size} 个主题：${[...byFile.entries()].map(([f, n]) => `${f.slice(7, -3)} ${n}`).join(' / ')}`)
+  }
+  const st = mtimeMs(join(memDir, '.state.json'))
+  L.push(st === null
+    ? '  采集停更    .state.json 不存在（没跑过 collect？）'
+    : `  采集停更    ${daysAgo(st)} 天（.state.json 最后写入 ${fmtTime(st)}；按日历天算 ${calendarDaysAgo(st)} 天）`)
+  const fresh = freshnessLine(memDir)
+  if (fresh) L.push(fresh.replace(/^ +/, '  库新鲜度    '))
+  return L.join('\n')
 }
